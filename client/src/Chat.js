@@ -12,9 +12,9 @@ function Chat({ socket, username, room }) {
         author: username,
         message: currentMessage,
         time:
-          new Date(Date.now()).getHours() +
+          new Date(Date.now()).getHours().toString().padStart(2, '0') +
           ":" +
-          new Date(Date.now()).getMinutes(),
+          new Date(Date.now()).getMinutes().toString().padStart(2, '0'),
       };
 
       await socket.emit("send_message", messageData);
@@ -24,9 +24,16 @@ function Chat({ socket, username, room }) {
   };
 
   useEffect(() => {
-    socket.on("receive_message", (data) => {
+    const handleMessage = (data) => {
       setMessageList((list) => [...list, data]);
-    });
+    };
+
+    socket.on("receive_message", handleMessage);
+
+    // Cleanup on unmount
+    return () => {
+      socket.off("receive_message", handleMessage);
+    };
   }, [socket]);
 
   return (
@@ -36,9 +43,10 @@ function Chat({ socket, username, room }) {
       </div>
       <div className="chat-body">
         <ScrollToBottom className="message-container">
-          {messageList.map((messageContent) => {
+          {messageList.map((messageContent, index) => {
             return (
               <div
+                key={index} // or use a unique identifier if available
                 className="message"
                 id={username === messageContent.author ? "you" : "other"}
               >
@@ -68,7 +76,9 @@ function Chat({ socket, username, room }) {
             event.key === "Enter" && sendMessage();
           }}
         />
-        <button onClick={sendMessage}>&#9658;</button>
+        <button onClick={sendMessage} disabled={!currentMessage}>
+          &#9658;
+        </button>
       </div>
     </div>
   );
